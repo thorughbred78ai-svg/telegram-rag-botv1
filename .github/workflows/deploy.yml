@@ -16,6 +16,10 @@ env:
 
 jobs:
 
+  # ==========================================================
+  # Test
+  # ==========================================================
+
   test:
     name: Test
     runs-on: ubuntu-24.04
@@ -40,9 +44,13 @@ jobs:
           python -m py_compile app.py
 
 
+  # ==========================================================
+  # Build and Push
+  # ==========================================================
+
   docker:
     name: Build and Push Docker Image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: test
 
     steps:
@@ -75,9 +83,13 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
 
 
+  # ==========================================================
+  # Deploy
+  # ==========================================================
+
   deploy:
     name: Deploy Container
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     needs: docker
 
     steps:
@@ -90,16 +102,27 @@ jobs:
       # ======================================================
       # Runtime deployment
       #
-      # 這裡不要放 Telegram / Redis / Qdrant / OpenRouter
-      # Secret。
+      # TODO:
+      # Replace this section with the selected Container
+      # Runtime deployment command/action.
       #
-      # Secrets 應該存在於 Container Runtime。
+      # Runtime secrets should remain in the runtime.
       #
-      # 等你選定 Runtime 後，再把這裡替換成該 Runtime
-      # 官方 deployment action / CLI。
-      # ======================================================
-
-      - name: Deployment placeholder
-        run: |
-          echo "Container image is ready."
-          echo "Runtime deployment has not been configured yet."
+      # Required application secrets:
+      #
+      # TELEGRAM_BOT_TOKEN
+      # TELEGRAM_WEBHOOK_SECRET
+      # OPENROUTER_API_KEY
+      # OPENROUTER_MODEL
+      # QDRANT_URL
+      # QDRANT_API_KEY
+      # QDRANT_COLLECTION
+      # EMBEDDING_MODEL
+      # REDIS_URL
+      #
+      # Application configuration:
+      #
+      # RATE_LIMIT_REQUESTS
+      # RATE_LIMIT_WINDOW
+      # HISTORY_TURNS
+      # QDRANT_TOP_K
