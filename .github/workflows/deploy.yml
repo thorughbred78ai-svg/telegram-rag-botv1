@@ -27,10 +27,10 @@ jobs:
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
@@ -45,18 +45,20 @@ jobs:
 
 
   # ==========================================================
-  # Build and Push
+  # Build + Push GHCR
   # ==========================================================
 
   docker:
     name: Build and Push Docker Image
     runs-on: ubuntu-24.04
-    needs: test
+
+    needs:
+      - test
 
     steps:
 
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -84,45 +86,35 @@ jobs:
 
 
   # ==========================================================
-  # Deploy
+  # Render
+  #
+  # Render watches the GHCR image and performs the actual
+  # runtime deployment.
+  #
+  # GitHub Actions does NOT receive runtime secrets.
   # ==========================================================
 
   deploy:
-    name: Deploy Container
+    name: Trigger Render Deployment
     runs-on: ubuntu-24.04
-    needs: docker
+
+    needs:
+      - docker
 
     steps:
 
-      - name: Deployment information
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK: ${{ secrets.RENDER_DEPLOY_HOOK }}
         run: |
-          echo "Docker image successfully published:"
-          echo "${{ env.IMAGE_NAME }}:latest"
+          if [ -z "$RENDER_DEPLOY_HOOK" ]; then
+            echo "RENDER_DEPLOY_HOOK is not configured."
+            exit 1
+          fi
 
-      # ======================================================
-      # Runtime deployment
-      #
-      # TODO:
-      # Replace this section with the selected Container
-      # Runtime deployment command/action.
-      #
-      # Runtime secrets should remain in the runtime.
-      #
-      # Required application secrets:
-      #
-      # TELEGRAM_BOT_TOKEN
-      # TELEGRAM_WEBHOOK_SECRET
-      # OPENROUTER_API_KEY
-      # OPENROUTER_MODEL
-      # QDRANT_URL
-      # QDRANT_API_KEY
-      # QDRANT_COLLECTION
-      # EMBEDDING_MODEL
-      # REDIS_URL
-      #
-      # Application configuration:
-      #
-      # RATE_LIMIT_REQUESTS
-      # RATE_LIMIT_WINDOW
-      # HISTORY_TURNS
-      # QDRANT_TOP_K
+          curl --fail --silent --show-error \
+            -X POST \
+            "$RENDER_DEPLOY_HOOK"
+
+          echo
+          echo "Render deployment triggered successfully."
